@@ -26,7 +26,7 @@ final class ExecutorTest extends TestCase {
             $logs[] = $data;
         };
 
-        Executor::execute( static::simpleCoro2( $log ) );
+        Loop::run( static::simpleCoro2( $log ) );
 
         $this->assertEquals( $logs, [
             'coro2: enter',
@@ -39,8 +39,8 @@ final class ExecutorTest extends TestCase {
 
     private static function concurrentWorker($name, $log) {
         for ($i = 0; $i < 4; ++$i) {
-            yield postpone;
             $log( "$name: $i" );
+            yield postpone;
         }
     }
 
@@ -55,7 +55,7 @@ final class ExecutorTest extends TestCase {
             $logs[] = $data;
         };
 
-        Executor::execute( static::concurrentMain( $log ) );
+        Loop::run( static::concurrentMain( $log ) );
 
         $this->assertEquals( $logs, [
             'first: 0',

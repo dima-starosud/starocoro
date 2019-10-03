@@ -19,32 +19,32 @@ const await = 'await';
 const spawn = 'spawn';
 const postpone = 'postpone';
 
-final class Executor {
+final class Loop {
     /**
      * @param Generator $generator
      * @throws UnsupportedYieldException
      * @throws DidNotYieldAValueException
      */
-    public static function execute(Generator $generator) {
-        $generators = new SplQueue();
-        $generators->enqueue( $generator );
-        while (!$generators->isEmpty()) {
-            $generator = $generators->dequeue();
-            if (!$generator->valid())
+    public static function run(Generator $generator) {
+        $streams = new SplQueue();
+        $streams->enqueue( new Stream( $generator ) );
+        while (!$streams->isEmpty()) {
+            /* @var Stream $stream */
+            $stream = $streams->dequeue();
+            $next = $stream->getNext();
+            if (empty( $next ))
                 continue;
 
-            $key = $generator->key();
-            $value = $generator->current();
+            list( $key, $value ) = $next;
+
             if ($key === await) {
-                $generator = static::handleContinuation( $value, $generator );
-                $generators->enqueue( $generator );
+                $generator = static::handleContinuation( $value, $stream->destruct() );
+                $streams->enqueue( new Stream( $generator ) );
             } elseif ($key === spawn) {
-                $generators->enqueue( $generator );
-                $generators->enqueue( $value );
-                $generator->next();
+                $streams->enqueue( $stream );
+                $streams->enqueue( new Stream( $value ) );
             } elseif (is_integer( $key ) and $value === postpone) {
-                $generators->enqueue( $generator );
-                $generator->next();
+                $streams->enqueue( $stream );
             } else {
                 throw new UnsupportedYieldException( "Unsupported: $key => $value" );
             }
